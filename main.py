@@ -18,8 +18,6 @@ ADMINS = [360421180, 414838934, ]
 CHANNEL_LIST = ''
 QUESTION_QUIZ = ['What?', 'When?', 'Where?']
 ANSWERS_QUIZ = [['It', 'That'], ['Now', 'Then'], ['Here', 'There']]
-
-
 # QUESTION_QUIZ = ['Число Пі (значення)', 'Які три числа дають однаковий результат при множенні і при додаванні?', 'Яка країна раніше називалась Сіамом?']
 # ANSWERS_QUIZ = [['3,14159265458979', '3,14159265358979', '3,14159365358979'], ['1, 2 і 3', '1, 1 і 1', '4, 8 і 10'], ['Тібет', 'Непал', 'Тайланд']]
 RIGHT_ANSWERS = [1, 0, 2]
@@ -301,8 +299,8 @@ def button_change(message):
         bot.reply_to(message, "Напиши назву кнопки та посилання у текстовому полі, розділивши їх значком * та відправ")
         bot.register_next_step_handler(message, final_button_text)
     elif message.text == 'Add welcome button':
-        bot.reply_to(message, "Напиши назву кнопки та посилання у текстовому полі, розділивши їх значком * та відправ")
-        bot.register_next_step_handler(message, welcome_button_text)
+        bot.reply_to(message, "Напиши назву кнопки у текстовому полі та відправ")
+        bot.register_next_step_handler(message, welcome_button_name)
     elif message.text == "Del URL-button":
         bot.send_message(message.chat.id, "Обери повідомлення, з якого хочеш видалити URL-кнопку", reply_markup=my_keyboards.keyboard_del_url_button())
         # bot.register_next_step_handler(message, kill_url_button)
@@ -312,28 +310,24 @@ def button_change(message):
 
 
 def start_button_text(message):
-    global URL_BUTTON
-    global TEXT_URL
     list_url_button = message.text.split('*')
-    if len(list_url_button) > 1:
-        try:
-            URL_BUTTON['START'] = list_url_button[0]
-            TEXT_URL['START'] = list_url_button[1]
-            bot.send_message(message.chat.id, "Add URL button", reply_markup=my_keyboards.keyboard_сhange_button())
-        except ApiTelegramException as e:
-            bot.reply_to(message, e)
+    name = 'button_start ' + list_url_button[0]
+    text = list_url_button[1]
+    print(name, text)
+    bot.send_message(message.chat.id, "Add URL button", reply_markup=my_keyboards.keyboard_add_url_button(name, text))
+
+
+def welcome_button_name(message):
+    global URL_BUTTON
+    URL_BUTTON['WELCOME'] = message.text
+    if message.text != '':
+        URL_BUTTON['WELCOME'] = message.text
+        bot.reply_to(message, "Add URL buttonю Введи посилання у текстову полу та відправ його")
+        bot.register_next_step_handler(message, welcome_button_text)
     else:
         bot.send_message(message.chat.id, "Некоректні дані, Спробуй знову",
                          reply_markup=my_keyboards.keyboard_сhange_button())
-    bot.register_next_step_handler(message, button_change)
-
-
-def welcome_button_text(message):
-    list_url_button = message.text.split('*')
-    name = 'button' + list_url_button[0]
-    text = list_url_button[1]
-    bot.send_message(message.chat.id, "Add URL button", reply_markup=my_keyboards.keyboard_add_url_button(name, text))
-
+        bot.register_next_step_handler(message, button_change)
 
 # @bot.callback_query_handler(func=lambda call: call.message.entities is not None)
 # def welcome_button_text1(call):
@@ -357,7 +351,7 @@ def final_button_text(message):
     global URL_BUTTON
     global TEXT_URL
     list_url_button = message.text.split('*')
-    if len(list_url_button) > 1:
+    if len(list_url_button) > 1 and (list_url_button[1].startswith('https://') or list_url_button[1].startswith('http:/')):
         URL_BUTTON['FINAL'] = list_url_button[0]
         TEXT_URL['FINAL'] = list_url_button[1]
         bot.send_message(message.chat.id, "Add URL button", reply_markup=my_keyboards.keyboard_сhange_button())
@@ -472,31 +466,45 @@ def kill_url_button(call):
 
 @bot.callback_query_handler(func=lambda call: "button" in call.data)
 def add_name_button(call):
-    print(call)
+    print('111', call.data)
     global URL_BUTTON
     if "button_start" in call.data:
-        URL_BUTTON['START'] = 'call.data'
-    elif "button_welcome" in call.data:
-        URL_BUTTON['WELCOME'] = 'call.data'
-    elif "button_final" in call.data:
-        URL_BUTTON['FINAL'] = 'call.data'
+        URL_BUTTON['START'] = call.data
     else:
         bot.reply_to(call.message, 'Bad text')
+        return
+    bot.reply_to(call.message, 'Add name button')
     bot.register_next_step_handler(call.message, button_change)
 
 
-@bot.callback_query_handler(func=lambda call: call.message.entities is not None)
+@bot.callback_query_handler(func=lambda call: call.data.startswith('http'))
 def add_url_welcome_button(call):
-    print(call)
+    print(call.message)
     global TEXT_URL
-    for entity in call.message.entities:
-        print(entity.type)
-        if entity.type in ['url', 'text_link']:
-            TEXT_URL['WELCOME'] = call.date
+    if call.data.startswith('https:/') or call.data.startswith('http:/'):
+        TEXT_URL['START'] = call.data
     else:
         bot.reply_to(call.message, 'Bad text')
-    bot.register_next_step_handler(call.message, button_change)
+
+
+@bot.message_handler(func=lambda message: message.entities is not None)
+def welcome_button_text(message):
+    print(message.entities)
+    if message.entities is not None:
+        for entity in message.entities:
+            print(entity.type)
+            if entity.type in ['url'] and (message.text.startswith('https://') or message.text.startswith('http:/')):
+                global TEXT_URL
+                TEXT_URL['WELCOME'] = message.text
+                print(TEXT_URL)
+            else:
+                bot.reply_to(message, 'Bad link. Try again')
+    else:
+        bot.reply_to(message, 'Bad link. Try again - press "Add...batton"')
+    bot.register_next_step_handler(message, button_change)
+    print('1')
 
 
 if __name__ == "__main__":
-    bot.infinity_polling()
+    bot.polling()
+    # bot.infinity_polling()
