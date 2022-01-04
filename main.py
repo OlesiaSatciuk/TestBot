@@ -13,13 +13,12 @@ CHANNEL_DICTIONARY_BY_ID = {-1001680753757: 'MyFirstTestBotChannel'}
 CHANNEL_ID = CHANNEL_DICTIONARY_BY_ID.keys()
 # CHANNEL_ID = [-1001504627195,]
 CHANNEL_TITLE = CHANNEL_DICTIONARY_BY_ID.values()
-# ADMINS = [414838934, ]
 ADMINS = [360421180, 414838934, ]
 CHANNEL_LIST = ''
-QUESTION_QUIZ = ['What?', 'When?', 'Where?']
-ANSWERS_QUIZ = [['It', 'That'], ['Now', 'Then'], ['Here', 'There']]
-# QUESTION_QUIZ = ['Число Пі (значення)', 'Які три числа дають однаковий результат при множенні і при додаванні?', 'Яка країна раніше називалась Сіамом?']
-# ANSWERS_QUIZ = [['3,14159265458979', '3,14159265358979', '3,14159365358979'], ['1, 2 і 3', '1, 1 і 1', '4, 8 і 10'], ['Тібет', 'Непал', 'Тайланд']]
+# QUESTION_QUIZ = ['What?', 'When?', 'Where?']
+# ANSWERS_QUIZ = [['It', 'That'], ['Now', 'Then'], ['Here', 'There']]
+QUESTION_QUIZ = ['Число Пі (значення)', 'Які три числа дають однаковий результат при множенні і при додаванні?', 'Яка країна раніше називалась Сіамом?']
+ANSWERS_QUIZ = [['3,14159265458979', '3,14159265358979', '3,14159365358979'], ['1, 2 і 3', '1, 1 і 1', '4, 8 і 10'], ['Тібет', 'Непал', 'Тайланд']]
 RIGHT_ANSWERS = [1, 0, 2]
 RIGHT_ANSWER = 0
 USER_ANSWERS = {}
@@ -32,15 +31,18 @@ URL_BUTTON = {'START': '', 'WELCOME': '', 'FINAL': ''}
 
 
 def is_subscribed(chat_ids, user_id):
-    for i in chat_ids:
-        try:
-            if bot.get_chat_member(i, user_id).status != 'left' and bot.get_chat_member(i, user_id).status != 'kicked':
+    print(chat_ids)
+    if len(chat_ids) > 0:
+        for i in chat_ids:
+            try:
                 print(i)
                 print(bot.get_chat_member(i, user_id).status)
-                return True
-        except ApiTelegramException as e:
-            if e.result_json['description'] == 'Bad Request: user not found':
-                return False
+                if bot.get_chat_member(i, user_id).status == 'left' or bot.get_chat_member(i, user_id).status == 'kicked':
+                    return False
+            except ApiTelegramException as e:
+                if e.result_json['description'] == 'Bad Request: user not found':
+                    return False
+    return True
 
 
 mytb = mysql.connector.connect(
@@ -70,8 +72,6 @@ my_cursor = mytb.cursor()
 # my_name = bot.get_me().username
 my_id = bot.get_me().id
 print(my_id)
-adm = [my_id, ]
-admins = set(adm)
 
 
 @bot.channel_post_handler(content_types=['text'], func=lambda m: "add" in m.text)
@@ -86,7 +86,7 @@ def channel_func(message):
     CHANNEL_LIST = ", @".join(list(CHANNEL_TITLE))
 
 
-@bot.message_handler(commands=['start'])#, func=lambda m: m.from_user.id == m.chat.id)
+@bot.message_handler(commands=['start'])
 def send_welcome(message):
     print(message)
     global CHANNEL_LIST
@@ -121,7 +121,8 @@ def send_welcome(message):
     else:
         if TEXT_URL['START'] == '' or URL_BUTTON['START'] == '':
             bot.send_message(message.from_user.id,
-                             "\u263A Привіт, {0}. \U0001F449, Щоб перейти далі, підпишись на канал @{1} та натисни /start. {2}".
+                             "\u263A Привіт, {0}. \U0001F449, "
+                             "Щоб перейти далі, підпишись на канал @{1} та натисни /start. {2}".
                              format(message.from_user.first_name, CHANNEL_LIST, START_TEXT),
                              reply_markup=my_keyboards.keyboard_start_remove())
         elif TEXT_URL['START'] and URL_BUTTON['START']:
@@ -139,7 +140,8 @@ def start_panel(message):
     if len(ANSWERS_QUIZ) == len(QUESTION_QUIZ) == len(RIGHT_ANSWERS):
         bot.send_message(message.chat.id, 'Hi, Admin', reply_markup=my_keyboards.keyboard_admin())
     else:
-        bot.send_message(ADMINS[0], "*Вікторина некоректна\!*", reply_markup=my_keyboards.keyboard_admin(), parse_mode='MarkdownV2')
+        bot.send_message(ADMINS[0], "*Вікторина некоректна/!*", reply_markup=my_keyboards.keyboard_admin(),
+                         parse_mode='MarkdownV2')
     bot.register_next_step_handler(message, admin_panel)
 
 
@@ -176,8 +178,9 @@ def admin_panel(message):
     elif message.text == 'Information':
         all_users, right_users = my_database.all_users()
         print(len(all_users), len(right_users))
-        bot.send_message(ADMINS[0], f'Кількість усіх користувачів - {len(all_users)}. \n'
-                                    f'Кількість користувачів, які дали правильну відповідь - {len(right_users)}')
+        for item in ADMINS:
+            bot.send_message(item, f'Кількість усіх користувачів - {len(all_users)}. \n'
+                                   f'Кількість користувачів, які дали правильну відповідь - {len(right_users)}')
     elif message.text == "URL-button":
         bot.send_message(message.chat.id, "Щоб додати URL-кнопку натисни кнопку нижче",
                          reply_markup=my_keyboards.keyboard_сhange_button())
@@ -208,22 +211,23 @@ def add_quiz(message):
         bot.reply_to(message, "Напиши номер правильної відповіді  у текстовому полі, та відправ її")
         bot.register_next_step_handler(message, admin_add_right_answer)
     elif message.text == 'Back':
-        global ANSWERS_QUIZ
-        global QUESTION_QUIZ
-        global RIGHT_ANSWERS
+        # global ANSWERS_QUIZ
+        # global QUESTION_QUIZ
+        # global RIGHT_ANSWERS
         if len(ANSWERS_QUIZ) == len(QUESTION_QUIZ) == len(RIGHT_ANSWERS):
             bot.send_message(message.chat.id, 'Quiz updated', reply_markup=my_keyboards.keyboard_admin())
         else:
             ANSWERS_QUIZ = []
             QUESTION_QUIZ = []
             RIGHT_ANSWERS = []
-            bot.send_message(ADMINS[0], "Вікторина некоректна. Вікторину очищено", reply_markup=my_keyboards.keyboard_admin())
+            bot.send_message(ADMINS[0], "Вікторина некоректна. Вікторину очищено",
+                             reply_markup=my_keyboards.keyboard_admin())
     else:
         bot.register_next_step_handler(message, add_quiz)
 
 
 def admin_add_question(message):
-    global QUESTION_QUIZ
+    # global QUESTION_QUIZ
     QUESTION_QUIZ.append(message.text)
     bot.send_message(message.chat.id, "Add_question", reply_markup=my_keyboards.keyboard_add_quiz())
     print(QUESTION_QUIZ)
@@ -238,7 +242,8 @@ def admin_add_answers(message):
         bot.send_message(message.chat.id, "Add_answers", reply_markup=my_keyboards.keyboard_add_quiz())
         print(ANSWERS_QUIZ)
     else:
-        bot.send_message(message.chat.id, "Некоректні дані, Спробуй знову", reply_markup=my_keyboards.keyboard_add_quiz())
+        bot.send_message(message.chat.id, "Некоректні дані, Спробуй знову",
+                         reply_markup=my_keyboards.keyboard_add_quiz())
     bot.register_next_step_handler(message, add_quiz)
 
 
@@ -292,73 +297,39 @@ def change_start_text(message):
 
 
 def button_change(message):
+    text = "Напиши назву кнопки у текстовому полі та відправ"
+    button = ''
     if message.text == 'Add start button':
-        bot.reply_to(message, "Напиши назву кнопки та посилання у текстовому полі, розділивши їх значком * та відправ")
-        bot.register_next_step_handler(message, start_button_text)
+        button = 'START'
+        bot.reply_to(message, text)
+        bot.register_next_step_handler(message, button_name, button)
     elif message.text == 'Add final button':
-        bot.reply_to(message, "Напиши назву кнопки та посилання у текстовому полі, розділивши їх значком * та відправ")
-        bot.register_next_step_handler(message, final_button_text)
+        button = 'FINAL'
+        bot.reply_to(message, text)
+        bot.register_next_step_handler(message, button_name, button)
     elif message.text == 'Add welcome button':
-        bot.reply_to(message, "Напиши назву кнопки у текстовому полі та відправ")
-        bot.register_next_step_handler(message, welcome_button_name)
+        button = 'WELCOME'
+        bot.reply_to(message, text)
+        bot.register_next_step_handler(message, button_name, button)
     elif message.text == "Del URL-button":
-        bot.send_message(message.chat.id, "Обери повідомлення, з якого хочеш видалити URL-кнопку", reply_markup=my_keyboards.keyboard_del_url_button())
-        # bot.register_next_step_handler(message, kill_url_button)
+        bot.send_message(message.chat.id, "Обери повідомлення, з якого хочеш видалити URL-кнопку",
+                         reply_markup=my_keyboards.keyboard_del_url_button())
     else:
         bot.send_message(message.chat.id, 'Bye', reply_markup=my_keyboards.keyboard_admin())
         bot.register_next_step_handler(message, admin_panel)
 
 
-def start_button_text(message):
-    list_url_button = message.text.split('*')
-    name = 'button_start ' + list_url_button[0]
-    text = list_url_button[1]
-    print(name, text)
-    bot.send_message(message.chat.id, "Add URL button", reply_markup=my_keyboards.keyboard_add_url_button(name, text))
-
-
-def welcome_button_name(message):
+def button_name(message, button):
     global URL_BUTTON
-    URL_BUTTON['WELCOME'] = message.text
+    URL_BUTTON[button] = message.text
     if message.text != '':
-        URL_BUTTON['WELCOME'] = message.text
-        bot.reply_to(message, "Add URL buttonю Введи посилання у текстову полу та відправ його")
-        bot.register_next_step_handler(message, welcome_button_text)
+        URL_BUTTON[button] = message.text
+        bot.reply_to(message, "Add name URL-button.\nВведи посилання у текстовe полe та відправ його")
+        bot.register_next_step_handler(message, button_text, button)
     else:
         bot.send_message(message.chat.id, "Некоректні дані, Спробуй знову",
                          reply_markup=my_keyboards.keyboard_сhange_button())
         bot.register_next_step_handler(message, button_change)
-
-# @bot.callback_query_handler(func=lambda call: call.message.entities is not None)
-# def welcome_button_text1(call):
-#     global URL_BUTTON
-#     global TEXT_URL
-#     list_url_button = message.text.split('*')
-#     name = list_url_button[0]
-#     text = list_url_button[1]
-#     bot.send_message(message.chat.id, "Add URL button", reply_markup=my_keyboards.keyboard_add_url_button(name, text))
-#     # if len(list_url_button) > 1:
-#     #     URL_BUTTON['WELCOME'] = list_url_button[0]
-#     #     TEXT_URL['WELCOME'] = list_url_button[1]
-#     #     bot.send_message(message.chat.id, "Add URL button", reply_markup=my_keyboards.keyboard_сhange_button())
-#     # else:
-#     #     bot.send_message(message.chat.id, "Некоректні дані, Спробуй знову",
-#     #                      reply_markup=my_keyboards.keyboard_сhange_button())
-#     bot.register_next_step_handler(message, button_change)
-
-
-def final_button_text(message):
-    global URL_BUTTON
-    global TEXT_URL
-    list_url_button = message.text.split('*')
-    if len(list_url_button) > 1 and (list_url_button[1].startswith('https://') or list_url_button[1].startswith('http:/')):
-        URL_BUTTON['FINAL'] = list_url_button[0]
-        TEXT_URL['FINAL'] = list_url_button[1]
-        bot.send_message(message.chat.id, "Add URL button", reply_markup=my_keyboards.keyboard_сhange_button())
-    else:
-        bot.send_message(message.chat.id, "Некоректні дані, Спробуй знову",
-                         reply_markup=my_keyboards.keyboard_сhange_button())
-    bot.register_next_step_handler(message, button_change)
 
 
 @bot.message_handler(content_types=['text'], func=lambda m: m.from_user.id == m.chat.id)
@@ -401,11 +372,6 @@ def quiz_panel(message):
         bot.send_message(message.chat.id, 'Ups. Press /start', reply_markup=my_keyboards.keyboard_start(message, ADMINS))
 
 
-@bot.poll_handler(func=lambda call: True)
-def my_text_and_contact1(call):
-    print('1§', call)
-
-
 def continue_question(message):
     global USER_ANSWERS
     number = 0
@@ -422,7 +388,6 @@ def continue_question(message):
                 number += 1
         bot.send_message(message.chat.id, "Вікторину завершено. У тебе {0} правильних відповідей".format(number),
                          reply_markup=my_keyboards.keyboard_start(message, ADMINS))
-        # bot.delete_message(message.chat.id, message.id)
         if number == len(RIGHT_ANSWERS):
             my_database.right_answers(message.from_user.id)
         my_database.del_answers(message.from_user.id)
@@ -432,17 +397,17 @@ def continue_question(message):
 
 
 @bot.poll_answer_handler(func=lambda call: True)
-def my_text_and_contact(call):
-    global USER_ANSWERS
-    global NUMBER_CORRECT_ANSWERS
-    answ = my_database.get_info_answers(call.user.id)
-    print(answ, call.user.id)
-    if answ == None:
+def info_answers(call):
+    # global USER_ANSWERS
+    # global NUMBER_CORRECT_ANSWERS
+    answer = my_database.get_info_answers(call.user.id)
+    print(answer, call.user.id)
+    if answer == None:
         my_database.add_answers(call.option_ids[0], call.user.id)
     else:
-        an = str(answ) + str(call.option_ids[0])
-        print(an, call.user.id)
-        my_database.add_answers(int(an), call.user.id)
+        ans = str(answer) + str(call.option_ids[0])
+        print(ans, call.user.id)
+        my_database.add_answers(int(ans), call.user.id)
 
 
 @bot.callback_query_handler(func=lambda call: "URL" in call.data)
@@ -464,43 +429,23 @@ def kill_url_button(call):
     bot.register_next_step_handler(call.message, button_change)
 
 
-@bot.callback_query_handler(func=lambda call: "button" in call.data)
-def add_name_button(call):
-    print('111', call.data)
-    global URL_BUTTON
-    if "button_start" in call.data:
-        URL_BUTTON['START'] = call.data
-    else:
-        bot.reply_to(call.message, 'Bad text')
-        return
-    bot.reply_to(call.message, 'Add name button')
-    bot.register_next_step_handler(call.message, button_change)
-
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith('http'))
-def add_url_welcome_button(call):
-    print(call.message)
-    global TEXT_URL
-    if call.data.startswith('https:/') or call.data.startswith('http:/'):
-        TEXT_URL['START'] = call.data
-    else:
-        bot.reply_to(call.message, 'Bad text')
-
-
 @bot.message_handler(func=lambda message: message.entities is not None)
-def welcome_button_text(message):
+def button_text(message, button):
+    print('222', button)
     print(message.entities)
     if message.entities is not None:
         for entity in message.entities:
             print(entity.type)
             if entity.type in ['url'] and (message.text.startswith('https://') or message.text.startswith('http:/')):
                 global TEXT_URL
-                TEXT_URL['WELCOME'] = message.text
+                TEXT_URL[button] = message.text
                 print(TEXT_URL)
             else:
-                bot.reply_to(message, 'Bad link. Try again')
+                send = '{0} {1} {2}'.format('Bad link', button, '-button. Try again')
+                print(send)
+                bot.reply_to(message, send)
     else:
-        bot.reply_to(message, 'Bad link. Try again - press "Add...batton"')
+        bot.reply_to(message, '{0} {1} {2}'.format('Bad link. Try again - press "Add', button.lower(), 'button"'))
     bot.register_next_step_handler(message, button_change)
     print('1')
 
