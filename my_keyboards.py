@@ -91,10 +91,17 @@ def keyboard_url_button(URL_button, text_URL):
 
 def keyboard_add_url_button(name, text):
     keyboard = types.InlineKeyboardMarkup(keyboard=None, row_width=2)
-    name = types.InlineKeyboardButton(text='Name button', callback_data='name')
-    text = types.InlineKeyboardButton(text='Text URL', callback_data='text')
-    keyboard.add(name, text)
+    name_button = types.InlineKeyboardButton(text='Name button', callback_data=name)
+    text_button = types.InlineKeyboardButton(text='Text URL', callback_data=text)
+    keyboard.add(name_button, text_button)
     return keyboard
+
+
+# def keyboard_add_url_button(name, text):
+#     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+#     keyboard.add(*[types.KeyboardButton(name) for name in ['Name button', 'Text URL']])
+#     return keyboard
+
 
 def keyboard_del_url_button():
     keyboard = types.InlineKeyboardMarkup(keyboard=None, row_width=3)
