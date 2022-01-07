@@ -50,6 +50,26 @@ def get_info_answers(user_id):
         return None
 
 
+def get_info_answers_two(user_id):
+    mytb = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="root",
+        port="3306",
+        database="myTestBotDatabase",
+        auth_plugin='mysql_native_password'
+        # auth_plugin="caching_sha2_password"
+    )
+
+    my_cursor = mytb.cursor()
+    my_cursor.execute("SELECT answer_one FROM testbot_users WHERE user_id = %s" % user_id)
+    res = my_cursor.fetchone()
+    if res:
+        return res[0]
+    else:
+        return None
+
+
 def add_answers(answer, user_id):
     mytb = mysql.connector.connect(
         host="localhost",
@@ -64,6 +84,26 @@ def add_answers(answer, user_id):
     my_cursor.execute(f'UPDATE testbot_users SET answer_one={answer} WHERE user_id={user_id}')
     mytb.commit()
 
+
+def add_answers_two(user_id):
+    mytb = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="root",
+        port="3306",
+        database="myTestBotDatabase",
+        auth_plugin='mysql_native_password'
+        # auth_plugin="caching_sha2_password"
+    )
+    my_cursor = mytb.cursor()
+    my_cursor.execute("SELECT answer_two FROM testbot_users WHERE user_id = %s" % user_id)
+    res = my_cursor.fetchone()
+    result = res[0]+1
+    print(result, 'result')
+    my_cursor.execute(f'UPDATE testbot_users SET answer_two={result} WHERE user_id={user_id}')
+    mytb.commit()
+
+
 def del_answers(user_id):
     mytb = mysql.connector.connect(
         host="localhost",
@@ -75,6 +115,20 @@ def del_answers(user_id):
         )
     my_cursor = mytb.cursor()
     my_cursor.execute(f'UPDATE testbot_users SET answer_one = 9 WHERE user_id = {user_id}')
+    mytb.commit()
+
+
+def del_answers_two(user_id):
+    mytb = mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="root",
+        port="3306",
+        database="myTestBotDatabase",
+        auth_plugin='mysql_native_password'
+    )
+    my_cursor = mytb.cursor()
+    my_cursor.execute(f'UPDATE testbot_users SET answer_two = 0 WHERE user_id = {user_id}')
     mytb.commit()
 
 
@@ -93,8 +147,7 @@ def del_answers(user_id):
     #     return None
 
 
-
-def count_answers(user_id):
+def count_answers(text, user_id):
     mytb = mysql.connector.connect(
         host="localhost",
         user="root",
@@ -103,11 +156,19 @@ def count_answers(user_id):
         database="myTestBotDatabase",
         auth_plugin='mysql_native_password'
         )
+    column = ''
+    if text == 'quiz_one':
+        column = 'answer_one'
+    elif text == 'quiz_two':
+        column = 'answer_two'
+
     my_cursor = mytb.cursor()
-    my_cursor.execute("SELECT answer_one FROM testbot_users WHERE user_id = %s" % user_id)
+    my_cursor.execute(f"SELECT {column} FROM testbot_users WHERE user_id = {user_id}")
     res = my_cursor.fetchone()
-    if res:
+    if res and text == 'quiz_one':
         return list(str(res[0]))
+    elif res and text == 'quiz_two':
+        return (str(res[0]))
     else:
         return None
 

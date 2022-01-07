@@ -6,7 +6,22 @@ def keyboard_start(message, admins):
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
     if message.from_user.id in admins and message.from_user.id == message.chat.id:
         keyboard.add(*[types.KeyboardButton(name) for name in ['Admin Panel']])
+    keyboard.add(*[types.KeyboardButton(name) for name in ['Choose a quiz', 'The end']])
+    return keyboard
+
+
+def keyboard_start1(message, admins):
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, one_time_keyboard=True)
+    if message.from_user.id in admins and message.from_user.id == message.chat.id:
+        keyboard.add(*[types.KeyboardButton(name) for name in ['Admin Panel']])
     keyboard.add(*[types.KeyboardButton(name) for name in ['Take the quiz', 'The end']])
+    return keyboard
+
+
+def keyboard_two_quizzes():
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    keyboard.add(*[types.KeyboardButton(name) for name in ['The first quiz', 'The second quiz']])
+    keyboard.add(*[types.KeyboardButton(name) for name in ['Back']])
     return keyboard
 
 
