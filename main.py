@@ -15,8 +15,12 @@ CHANNEL_ID = CHANNEL_DICTIONARY_BY_ID.keys()
 CHANNEL_TITLE = CHANNEL_DICTIONARY_BY_ID.values()
 ADMINS = [360421180, 414838934, ]
 CHANNEL_LIST = ''
-# QUESTION_QUIZ = ['What?', 'When?', 'Where?']
-# ANSWERS_QUIZ = [['It', 'That'], ['Now', 'Then'], ['Here', 'There']]
+QUESTION_QUIZ_TWO = ['What?', 'When?', 'Where?']
+ANSWERS_QUIZ_TWO = [['It', 'That'], ['Here', 'There'], ['Now', 'Later', 'Before']]
+RIGHT_ANSWERS_TWO = [0, 1, 2]
+RIGHT_ANSWER_TWO = 0
+USER_ANSWERS_TWO = {}
+NUMBER_CORRECT_ANSWERS_TWO = 0
 QUESTION_QUIZ = ['Число Пі (значення)', 'Які три числа дають однаковий результат при множенні і при додаванні?', 'Яка країна раніше називалась Сіамом?']
 ANSWERS_QUIZ = [['3,14159265458979', '3,14159265358979', '3,14159365358979'], ['1, 2 і 3', '1, 1 і 1', '4, 8 і 10'], ['Тібет', 'Непал', 'Тайланд']]
 RIGHT_ANSWERS = [1, 0, 2]
@@ -28,6 +32,9 @@ FINAL_TEXT = 'Вікторину завершено'
 START_TEXT = ''
 TEXT_URL = {'START': '', 'WELCOME': '', 'FINAL': ''}
 URL_BUTTON = {'START': '', 'WELCOME': '', 'FINAL': ''}
+
+
+print(ANSWERS_QUIZ_TWO[0])
 
 
 def is_subscribed(chat_ids, user_id):
@@ -53,23 +60,9 @@ mytb = mysql.connector.connect(
     database="myTestBotDatabase",
     auth_plugin='mysql_native_password'
 )
-
 my_cursor = mytb.cursor()
 
 
-# my_cursor.execute('CREATE DATABASE myTestBotDatabase')
-# , "
-# my_cursor.execute("CREATE TABLE testbot_users (id INT AUTO_INCREMENT PRIMARY KEY, user_id INT, first_name VARCHAR(25))")
-# my_cursor.execute("ALTER TABLE testbot_users ADD COLUMN (last_name VARCHAR(50), user_name VARCHAR(50), status CHAR(10))")
-# my_cursor.execute("ALTER TABLE testbot_users ADD COLUMN (answer_two INT, answer_three INT, answer_four INT)")
-# my_cursor.execute("ALTER TABLE testbot_users ADD COLUMN (date_visits DATE NOT NULL DEFAULT (CURDATE()), right_answers INT DEFAULT 0)")
-# my_cursor.execute("DELETE FROM TESTbot_users")
-# my_cursor.execute("ALTER TABLE testbot_users MODIFY COLUMN answer_one INT DEFAULT 9")
-# my_cursor.execute("ALTER TABLE testbot_users MODIFY COLUMN user_id BIGINT NOT NULL UNIQUE")
-# my_cursor.execute('UPDATE testbot_users SET answer_one = 9')
-# my_cursor = mytb.cursor()
-# mytb.commit()
-# my_name = bot.get_me().username
 my_id = bot.get_me().id
 print(my_id)
 
@@ -131,7 +124,7 @@ def send_welcome(message):
                          format(message.from_user.first_name, CHANNEL_LIST), reply_markup=my_keyboards.keyboard_url_button(URL_BUTTON['START'], TEXT_URL['START']))
 
 
-@bot.message_handler(content_types=['text'], func=lambda m: m.text == "Admin Panel" and m.from_user.id in ADMINS and m.from_user.id == m.chat.id)
+@bot.message_handler(content_types=['text'], func=lambda m: m.text == "Admin Panel" and m.from_user.id in ADMINS)
 def start_panel(message):
     global ANSWERS_QUIZ
     global QUESTION_QUIZ
@@ -189,12 +182,25 @@ def admin_panel(message):
         bot.send_message(message.chat.id, "Щоб змінити потрібний текст натисни кнопку нижче",
                          reply_markup=my_keyboards.keyboard_сhange_text())
         bot.register_next_step_handler(message, text_change)
-    elif message.text == 'Take the quiz':
-        quiz_panel(message)
+    elif message.text == 'Choose a quiz':
+        bot.send_message(message.chat.id, 'Choose one of the quizzes',
+                         reply_markup=my_keyboards.keyboard_two_quizzes())
+        bot.register_next_step_handler(message, two_quizzes)
     elif message.text == 'The end':
-        quiz_panel(message)
+        first_quiz_panel(message)
     else:
         bot.reply_to(message, 'Ups. Press /start')
+
+
+# def two_quizzes(message):
+#     if message.text == 'The first quiz':
+#         first_quiz_panel(message)
+#     elif message.text == 'The second quiz':
+#         two_quiz_panel(message)
+#     else:
+#         bot.send_message(message.chat.id, "Bye",
+#                          reply_markup=my_keyboards.keyboard_start(message, ADMINS))
+#         bot.register_next_step_handler(message, send_welcome)
 
 
 def add_quiz(message):
@@ -250,12 +256,16 @@ def admin_add_answers(message):
 def admin_add_right_answer(message):
     global RIGHT_ANSWERS
     try:
-        if message.text or int(message.text) > len(ANSWERS_QUIZ[-1]):
+        if message.text and int(message.text) <= len(ANSWERS_QUIZ[-1]):
             RIGHT_ANSWERS.append(int(message.text) - 1)
             bot.send_message(message.chat.id, "Add_right_answer", reply_markup=my_keyboards.keyboard_add_quiz())
+        else:
+            bot.send_message(message.chat.id, "Неправильне значення 1", reply_markup=my_keyboards.keyboard_add_quiz())
     except ValueError as e:
-        bot.send_message(message.chat.id, "Неправильне значення", reply_markup=my_keyboards.keyboard_add_quiz())
+        bot.send_message(message.chat.id, "Неправильне значення 2", reply_markup=my_keyboards.keyboard_add_quiz())
         # bot.register_next_step_handler(message, add_quiz)
+    print(QUESTION_QUIZ)
+    print(ANSWERS_QUIZ)
     print(RIGHT_ANSWERS)
     bot.register_next_step_handler(message, add_quiz)
 
@@ -333,7 +343,79 @@ def button_name(message, button):
 
 
 @bot.message_handler(content_types=['text'], func=lambda m: m.from_user.id == m.chat.id)
-def quiz_panel(message):
+def start_user_panel(message):
+    if message.text == 'Choose a quiz':
+        bot.send_message(message.chat.id, 'Choose one of the quizzes',
+                         reply_markup=my_keyboards.keyboard_two_quizzes())
+        bot.register_next_step_handler(message, two_quizzes)
+    elif message.text == 'The end':
+        first_quiz_panel(message)
+
+
+def two_quizzes(message):
+    if message.text == 'The first quiz':
+        first_quiz_panel(message)
+    elif message.text == 'The second quiz':
+        two_quiz_panel(message)
+    else:
+        bot.send_message(message.chat.id, "Bye",
+                         reply_markup=my_keyboards.keyboard_start(message, ADMINS))
+        bot.register_next_step_handler(message, send_welcome)
+
+
+def two_quiz_panel(message):
+    if not is_subscribed(chat_ids=list(CHANNEL_ID), user_id=message.from_user.id):
+        bot.send_message(message.from_user.id,
+                         "\u263A Привіт, {0}. \U0001F449, Щоб перейти далі, підпишись на канал @{1} та натисни /start".
+                         format(message.from_user.first_name, CHANNEL_LIST),
+                         reply_markup=my_keyboards.keyboard_start(message, ADMINS))
+        bot.register_next_step_handler(message, send_welcome)
+        return
+    global ANSWERS_QUIZ_TWO
+    global QUESTION_QUIZ_TWO
+    global RIGHT_ANSWERS_TWO
+    global RIGHT_ANSWER_TWO
+    global NUMBER_CORRECT_ANSWERS_TWO
+    answers_quiz = copy.deepcopy(ANSWERS_QUIZ_TWO)
+    question_quiz = copy.deepcopy(QUESTION_QUIZ_TWO)
+    right_answers = copy.deepcopy(RIGHT_ANSWERS_TWO)
+    keyboard1 = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    keyboard1.add(*[telebot.types.KeyboardButton(item) for item in ANSWERS_QUIZ_TWO[-1]])
+    keyboard1.add(*[telebot.types.KeyboardButton(name) for name in ['Continue', 'Back']])
+
+    if message.text == "The second quiz" and len(ANSWERS_QUIZ_TWO) != 0 and len(ANSWERS_QUIZ_TWO) == len(QUESTION_QUIZ_TWO) == len(RIGHT_ANSWERS_TWO):
+        text = 'quiz_two'
+        while len(question_quiz) != 0:
+            keyboard2 = telebot.types.InlineKeyboardMarkup(keyboard=None, row_width=2)
+            for i in range(0, len(answers_quiz[-1])):
+                print(answers_quiz[-1][i])
+                uuu = telebot.types.InlineKeyboardButton(text=answers_quiz[-1][i],
+                                                         callback_data=str(i))
+                print(i)
+                keyboard2.add(uuu)
+
+            bot.send_message(message.chat.id, question_quiz[-1], reply_markup=keyboard2)
+            RIGHT_ANSWER_TWO = right_answers[-1]
+            answers_quiz.pop()
+            question_quiz.pop()
+            right_answers.pop()
+        if len(question_quiz) == 0:
+            bot.send_message(message.chat.id, 'Дай відповідь на ці запитання', reply_markup=my_keyboards.keyboard_two_question())
+            bot.register_next_step_handler(message, continue_question, text)
+    elif message.text == "The end":
+        bot.send_message(message.chat.id, 'Bye', reply_markup=my_keyboards.keyboard_start(message, ADMINS))
+        if TEXT_URL['FINAL'] == '' or URL_BUTTON['FINAL'] == '':
+            bot.reply_to(message, FINAL_TEXT)
+        elif TEXT_URL['FINAL'] and URL_BUTTON['FINAL']:
+            bot.send_message(message.from_user.id, FINAL_TEXT,
+                             reply_markup=my_keyboards.keyboard_url_button(URL_BUTTON['FINAL'], TEXT_URL['FINAL']))
+        # bot.register_next_step_handler(message, send_welcome)
+    else:
+        bot.send_message(message.chat.id, 'Ups. Press /start', reply_markup=my_keyboards.keyboard_start(message, ADMINS))
+
+
+# @bot.message_handler(content_types=['text'], func=lambda m: m.from_user.id == m.chat.id)
+def first_quiz_panel(message):
     if not is_subscribed(chat_ids=list(CHANNEL_ID), user_id=message.from_user.id):
         bot.send_message(message.from_user.id,
                          "\u263A Привіт, {0}. \U0001F449, Щоб перейти далі, підпишись на канал @{1} та натисни /start".
@@ -349,7 +431,8 @@ def quiz_panel(message):
     answers_quiz = copy.deepcopy(ANSWERS_QUIZ)
     question_quiz = copy.deepcopy(QUESTION_QUIZ)
     right_answers = copy.deepcopy(RIGHT_ANSWERS)
-    if message.text == "Take the quiz" and len(ANSWERS_QUIZ) != 0 and len(ANSWERS_QUIZ) == len(QUESTION_QUIZ) == len(RIGHT_ANSWERS):
+    if message.text == "The first quiz" and len(ANSWERS_QUIZ) != 0 and len(ANSWERS_QUIZ) == len(QUESTION_QUIZ) == len(RIGHT_ANSWERS):
+        text = 'quiz_one'
         while len(question_quiz) != 0:
             bot.send_poll(message.chat.id, question_quiz[-1], answers_quiz[-1], is_anonymous=False, type='quiz',
                           correct_option_id=right_answers[-1], open_period=60)
@@ -359,7 +442,7 @@ def quiz_panel(message):
             right_answers.pop()
         if len(question_quiz) == 0:
             bot.send_message(message.chat.id, 'Дай відповідь на ці запитання', reply_markup=my_keyboards.keyboard_two_question())
-            bot.register_next_step_handler(message, continue_question)
+            bot.register_next_step_handler(message, continue_question, text)
     elif message.text == "The end":
         bot.send_message(message.chat.id, 'Bye', reply_markup=my_keyboards.keyboard_start(message, ADMINS))
         if TEXT_URL['FINAL'] == '' or URL_BUTTON['FINAL'] == '':
@@ -372,25 +455,29 @@ def quiz_panel(message):
         bot.send_message(message.chat.id, 'Ups. Press /start', reply_markup=my_keyboards.keyboard_start(message, ADMINS))
 
 
-def continue_question(message):
+def continue_question(message, text):
     global USER_ANSWERS
     number = 0
     print(message)
-    user_answers = my_database.count_answers(message.from_user.id)
-    user_answers.remove('9')
-    if message.text == 'Bye' and len(user_answers) <= (len(RIGHT_ANSWERS)):
+    user_answers = my_database.count_answers(text, message.from_user.id)
+    if message.text == 'Bye' and text == 'quiz_one' and len(user_answers)-1 <= (len(RIGHT_ANSWERS)):
+        user_answers.remove('9')
         reverse_right_answers = copy.deepcopy(RIGHT_ANSWERS)
         reverse_right_answers.reverse()
-        print(reverse_right_answers)
-        print(user_answers)
         for i in range(0, len(user_answers)):
             if user_answers[i] == str(reverse_right_answers[i]):
                 number += 1
-        bot.send_message(message.chat.id, "Вікторину завершено. У тебе {0} правильних відповідей".format(number),
-                         reply_markup=my_keyboards.keyboard_start(message, ADMINS))
+        bot.send_message(message.chat.id, "Вікторину завершено. Правильних відповідей - {0}".format(number),
+                         reply_markup=my_keyboards.keyboard_two_quizzes())
+        bot.register_next_step_handler(message, two_quizzes)
         if number == len(RIGHT_ANSWERS):
             my_database.right_answers(message.from_user.id)
         my_database.del_answers(message.from_user.id)
+    elif message.text == 'Bye' and text == 'quiz_two':
+        bot.send_message(message.chat.id, "Вікторину завершено. Правильних відповідей - {0} ".format(user_answers),
+                         reply_markup=my_keyboards.keyboard_two_quizzes())
+        my_database.del_answers_two(message.from_user.id)
+        bot.register_next_step_handler(message, two_quizzes)
     else:
         bot.reply_to(message, 'Oh')
         my_database.del_answers(message.from_user.id)
@@ -402,7 +489,7 @@ def info_answers(call):
     # global NUMBER_CORRECT_ANSWERS
     answer = my_database.get_info_answers(call.user.id)
     print(answer, call.user.id)
-    if answer == None:
+    if answer is None:
         my_database.add_answers(call.option_ids[0], call.user.id)
     else:
         ans = str(answer) + str(call.option_ids[0])
@@ -427,6 +514,32 @@ def kill_url_button(call):
     else:
         bot.reply_to(call.message, 'Bad text')
     bot.register_next_step_handler(call.message, button_change)
+
+
+@bot.callback_query_handler(func=lambda call: True)
+def two(call):
+    print(type(call.data))
+    # print(call.message.text)
+    print('call.data', call.data)
+    print(call.message.text)
+    text = 'quiz_two'
+    global QUESTION_QUIZ_TWO
+    global RIGHT_ANSWERS_TWO
+    global RIGHT_ANSWER_TWO
+    index_two = QUESTION_QUIZ_TWO.index(call.message.text)
+
+    print('type' , type(index_two))
+    print(call.from_user.id)
+    print('index_two -', index_two, 'RIGHT_ANSWERS_TWO -', RIGHT_ANSWERS_TWO[index_two])
+    if RIGHT_ANSWERS_TWO[index_two] == int(call.data):
+        RIGHT_ANSWER_TWO += 1
+        my_database.add_answers_two(call.from_user.id)
+        bot.reply_to(call.message, "Good")
+    else:
+        bot.reply_to(call.message, "Bad")
+    print(RIGHT_ANSWER_TWO)
+    # bot.register_next_step_handler(call.message, continue_question, text)
+
 
 
 @bot.message_handler(func=lambda message: message.entities is not None)
