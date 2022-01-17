@@ -6,6 +6,7 @@ from telebot.apihelper import ApiTelegramException
 import my_database
 import my_keyboards
 import copy
+from itertools import chain
 
 bot: TeleBot = telebot.TeleBot("5091957616:AAFFi9pltzHexgPU4NviTBSIu_GNbj1sKp8")
 
@@ -32,6 +33,7 @@ FINAL_TEXT = 'Вікторину завершено'
 START_TEXT = ''
 TEXT_URL = {'START': '', 'WELCOME': '', 'FINAL': ''}
 URL_BUTTON = {'START': '', 'WELCOME': '', 'FINAL': ''}
+
 
 
 print(ANSWERS_QUIZ_TWO[0])
@@ -75,7 +77,6 @@ def channel_func(message):
     CHANNEL_DICTIONARY_BY_ID[message.chat.id] = message.chat.title
     bot.send_message(message.chat.id, message.chat.title)
     print(CHANNEL_DICTIONARY_BY_ID, CHANNEL_ID, list(CHANNEL_TITLE))
-    print(type(CHANNEL_DICTIONARY_BY_ID), type(CHANNEL_ID), type(CHANNEL_TITLE))
     CHANNEL_LIST = ", @".join(list(CHANNEL_TITLE))
 
 
@@ -143,6 +144,7 @@ def admin_panel(message):
     if message.text == 'Add channel':
         bot.send_message(message.chat.id, "Із переліку каналів, де ти є адміном, обери потрібний, використовуючи кнопку",
                          reply_markup=my_keyboards.keyboard_add_channel())
+        bot.register_next_step_handler(message, admin_panel)
     elif message.text == 'Clear channel list':
         global CHANNEL_DICTIONARY_BY_ID
         CHANNEL_DICTIONARY_BY_ID = {}
@@ -155,7 +157,7 @@ def admin_panel(message):
         bot.reply_to(message, 'Список каналів очищеною.')
         print(CHANNEL_TITLE, CHANNEL_LIST)
     elif message.text == 'Create a quiz':
-        bot.send_message(message.chat.id, "Щоб створити віктонину натисни кнопку нижче",
+        bot.send_message(message.chat.id, "Щоб створити вікторину натисни кнопку нижче",
                          reply_markup=my_keyboards.keyboard_add_quiz())
         bot.register_next_step_handler(message, add_quiz)
     elif message.text == 'Clear the quiz':
@@ -170,6 +172,8 @@ def admin_panel(message):
         bot.send_message(message.chat.id, 'Bye admin', reply_markup=my_keyboards.keyboard_start(message, ADMINS))
     elif message.text == 'Information':
         all_users, right_users = my_database.all_users()
+        # print(list(map(''.join, all_users)))
+        print(list(chain.from_iterable(all_users)))
         print(len(all_users), len(right_users))
         for item in ADMINS:
             bot.send_message(item, f'Кількість усіх користувачів - {len(all_users)}. \n'
@@ -186,6 +190,9 @@ def admin_panel(message):
         bot.send_message(message.chat.id, 'Choose one of the quizzes',
                          reply_markup=my_keyboards.keyboard_two_quizzes())
         bot.register_next_step_handler(message, two_quizzes)
+    elif message.text == "Add admin":
+        bot.reply_to(message, "напиши ID адміна і відправ")
+        bot.register_next_step_handler(message, admin_add)
     elif message.text == 'The end':
         first_quiz_panel(message)
     else:
@@ -202,6 +209,23 @@ def admin_panel(message):
 #                          reply_markup=my_keyboards.keyboard_start(message, ADMINS))
 #         bot.register_next_step_handler(message, send_welcome)
 
+
+def admin_add(message):
+    all_users, right_users = my_database.all_users()
+    # print(list(map(''.join, all_users)))
+    print(list(chain.from_iterable(all_users)))
+    list_admin = list(chain.from_iterable(all_users))
+    try:
+        if int(message.text) in list_admin and int(message.text) not in ADMINS:
+            ADMINS.append(int(message.text))
+            print(ADMINS)
+            bot.reply_to(message, "Add user")
+        else:
+            bot.reply_to(message, "The user is not subscribed to this telegram bot\n"
+                                  " or there is already such an administrator")
+    except ValueError as e:
+        bot.reply_to(message, "ValueError. Try again")
+        print("Oops")
 
 def add_quiz(message):
     global ANSWERS_QUIZ
@@ -288,21 +312,21 @@ def text_change(message):
 def change_welcome_text(message):
     global WELCOME_TEXT
     WELCOME_TEXT = message.text
-    bot.reply_to(message, 'Вітальний текст змінено')
+    bot.send_message(message.chat.id, 'Вітальний текст змінено', reply_markup=my_keyboards.keyboard_сhange_text())
     bot.register_next_step_handler(message, text_change)
 
 
 def change_final_text(message):
     global FINAL_TEXT
     FINAL_TEXT = message.text
-    bot.reply_to(message, 'Фінальний текст змінено')
+    bot.send_message(message.chat.id, 'Фінальний текст змінено', reply_markup=my_keyboards.keyboard_сhange_text())
     bot.register_next_step_handler(message, text_change)
 
 
 def change_start_text(message):
     global WELCOME_TEXT
     WELCOME_TEXT = message.text
-    bot.reply_to(message, 'Вітальний текст змінено')
+    bot.send_message(message.chat.id, 'Стартовий текст змінено', reply_markup=my_keyboards.keyboard_сhange_text())
     bot.register_next_step_handler(message, text_change)
 
 
@@ -516,6 +540,12 @@ def kill_url_button(call):
     bot.register_next_step_handler(call.message, button_change)
 
 
+@bot.callback_query_handler(func=lambda call: "start" in call.data)
+def start(call):
+    bot.send_message(call.message.chat.id, "Обери знову потрібну кнопку",
+                     reply_markup=my_keyboards.keyboard_admin())
+
+
 @bot.callback_query_handler(func=lambda call: True)
 def two(call):
     print(type(call.data))
@@ -559,6 +589,7 @@ def button_text(message, button):
                 bot.reply_to(message, send)
     else:
         bot.reply_to(message, '{0} {1} {2}'.format('Bad link. Try again - press "Add', button.lower(), 'button"'))
+    bot.send_message(message.chat.id, 'Add {0} {1}'.format(button.lower(), 'button'), reply_markup=my_keyboards.keyboard_сhange_button())
     bot.register_next_step_handler(message, button_change)
     print('1')
 
