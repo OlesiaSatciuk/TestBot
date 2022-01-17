@@ -35,7 +35,9 @@ def keyboard_admin():
     keyboard.add(*[types.KeyboardButton(name) for name in ['Add channel', 'Clear channel list']])
     keyboard.add(*[types.KeyboardButton(name) for name in ['Create a quiz', 'Clear the quiz']])
     keyboard.add(*[types.KeyboardButton(name) for name in ['Change the text', 'URL-button']])
-    keyboard.add(*[types.KeyboardButton(name) for name in ['Information', 'Exit']])
+    keyboard.add(*[types.KeyboardButton(name) for name in ['Information', 'Add admin']])
+    keyboard.add(*[types.KeyboardButton(name) for name in ['Exit']])
+
     return keyboard
 
 
@@ -57,8 +59,9 @@ def keyboard_channel():
 def keyboard_add_channel():
     add_keyboard = types.InlineKeyboardMarkup(keyboard=None, row_width=2)
     add = types.InlineKeyboardButton("Add channel", switch_inline_query="add")
+    start = types.InlineKeyboardButton("Back", callback_data='/start')
     # family = types.InlineKeyboardButton("MyFamily", url='https://t.me/+Y7FFqm-mrMliZDli')
-    add_keyboard.add(add)
+    add_keyboard.add(add, start)
     return add_keyboard
 
 
