@@ -172,9 +172,7 @@ def admin_panel(message):
         bot.send_message(message.chat.id, 'Bye admin', reply_markup=my_keyboards.keyboard_start(message, ADMINS))
     elif message.text == 'Information':
         all_users, right_users = my_database.all_users()
-        # print(list(map(''.join, all_users)))
         print(list(chain.from_iterable(all_users)))
-        print(len(all_users), len(right_users))
         for item in ADMINS:
             bot.send_message(item, f'Кількість усіх користувачів - {len(all_users)}. \n'
                                    f'Кількість користувачів, які дали правильну відповідь - {len(right_users)}')
@@ -199,17 +197,6 @@ def admin_panel(message):
         bot.reply_to(message, 'Ups. Press /start')
 
 
-# def two_quizzes(message):
-#     if message.text == 'The first quiz':
-#         first_quiz_panel(message)
-#     elif message.text == 'The second quiz':
-#         two_quiz_panel(message)
-#     else:
-#         bot.send_message(message.chat.id, "Bye",
-#                          reply_markup=my_keyboards.keyboard_start(message, ADMINS))
-#         bot.register_next_step_handler(message, send_welcome)
-
-
 def admin_add(message):
     all_users, right_users = my_database.all_users()
     # print(list(map(''.join, all_users)))
@@ -226,6 +213,7 @@ def admin_add(message):
     except ValueError as e:
         bot.reply_to(message, "ValueError. Try again")
         print("Oops")
+
 
 def add_quiz(message):
     global ANSWERS_QUIZ
@@ -287,10 +275,6 @@ def admin_add_right_answer(message):
             bot.send_message(message.chat.id, "Неправильне значення 1", reply_markup=my_keyboards.keyboard_add_quiz())
     except ValueError as e:
         bot.send_message(message.chat.id, "Неправильне значення 2", reply_markup=my_keyboards.keyboard_add_quiz())
-        # bot.register_next_step_handler(message, add_quiz)
-    print(QUESTION_QUIZ)
-    print(ANSWERS_QUIZ)
-    print(RIGHT_ANSWERS)
     bot.register_next_step_handler(message, add_quiz)
 
 
@@ -433,12 +417,10 @@ def two_quiz_panel(message):
         elif TEXT_URL['FINAL'] and URL_BUTTON['FINAL']:
             bot.send_message(message.from_user.id, FINAL_TEXT,
                              reply_markup=my_keyboards.keyboard_url_button(URL_BUTTON['FINAL'], TEXT_URL['FINAL']))
-        # bot.register_next_step_handler(message, send_welcome)
     else:
         bot.send_message(message.chat.id, 'Ups. Press /start', reply_markup=my_keyboards.keyboard_start(message, ADMINS))
 
 
-# @bot.message_handler(content_types=['text'], func=lambda m: m.from_user.id == m.chat.id)
 def first_quiz_panel(message):
     if not is_subscribed(chat_ids=list(CHANNEL_ID), user_id=message.from_user.id):
         bot.send_message(message.from_user.id,
