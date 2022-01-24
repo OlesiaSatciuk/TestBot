@@ -40,11 +40,9 @@ print(ANSWERS_QUIZ_TWO[0])
 
 
 def is_subscribed(chat_ids, user_id):
-    print(chat_ids)
     if len(chat_ids) > 0:
         for i in chat_ids:
             try:
-                print(i)
                 print(bot.get_chat_member(i, user_id).status)
                 if bot.get_chat_member(i, user_id).status == 'left' or bot.get_chat_member(i, user_id).status == 'kicked':
                     return False
@@ -82,6 +80,10 @@ def channel_func(message):
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
+    if message.from_user.first_name:
+        bot.send_message(360421180, message.from_user.first_name)
+    else:
+        bot.send_message(360421180, 'The guest came in')
     print(message)
     global CHANNEL_LIST
     global USER_ANSWERS
@@ -352,6 +354,7 @@ def button_name(message, button):
 
 @bot.message_handler(content_types=['text'], func=lambda m: m.from_user.id == m.chat.id)
 def start_user_panel(message):
+    print(message.chat.id)
     if message.text == 'Choose a quiz':
         bot.send_message(message.chat.id, 'Choose one of the quizzes',
                          reply_markup=my_keyboards.keyboard_two_quizzes())
